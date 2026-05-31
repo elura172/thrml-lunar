@@ -40,6 +40,7 @@ FIELD_SCALE_THRML = 17.0   # makes field_weight=1 ~1:1 with THRML unary factors
 
 FIELD_MODES = [
     "None",
+    "Lunar phases",       # 9 phases mapped row-by-row, symbolically grounded
     "Row gradient",
     "Column gradient",
     "Radial",
@@ -48,6 +49,18 @@ FIELD_MODES = [
     "2D Interference",
     "Lunar wave",
     "Noise",
+]
+
+LUNAR_PHASES = [
+    ("New Moon",        0.00),
+    ("Crescent Waxing", 0.15),
+    ("First Quarter",   0.30),
+    ("Gibbous Waxing",  0.50),
+    ("Full Moon",       1.00),
+    ("Gibbous Waning",  0.60),
+    ("Last Quarter",    0.40),
+    ("Crescent Waning", 0.20),
+    ("Dark Moon",       0.05),
 ]
 
 
@@ -59,7 +72,11 @@ def make_field(mode: str, seed: int = 7, freq: float = 1.0) -> np.ndarray | None
     I, J = np.meshgrid(np.arange(N), np.arange(N), indexing="ij")
     center = (N - 1) / 2.0
 
-    if mode == "Row gradient":
+    if mode == "Lunar phases":
+        intensities = np.array([v for _, v in LUNAR_PHASES], dtype=np.float32)
+        field = np.outer(intensities, np.ones(N))
+
+    elif mode == "Row gradient":
         field = np.outer(np.linspace(0, 1, N), np.ones(N))
 
     elif mode == "Column gradient":
@@ -334,6 +351,11 @@ def render_field(field: np.ndarray, mode: str, field_weight: float) -> plt.Figur
         for j in range(N):
             ax.text(j, i, f"{field[i,j]:.1f}",
                     ha="center", va="center", color="white", fontsize=4.5, alpha=0.9)
+    # Annotate phase names for Lunar phases mode
+    if mode == "Lunar phases":
+        for i, (name, _) in enumerate(LUNAR_PHASES):
+            ax.text(-0.6, i, name, ha="right", va="center",
+                    color="#a78bfa", fontsize=4, style="italic")
     ax.axis("off")
 
     # Right: target values (what number the annealer wants here)
