@@ -289,7 +289,7 @@ with st.sidebar:
         diagonal = False
         lunar_weight = 0.0
 
-    run = st.button("▶  Run", use_container_width=True, type="primary")
+    run = st.button("▶  Run", width="stretch", type="primary")
     st.markdown("---")
     st.markdown(
         "<small style='color:#6b7280'>"
@@ -329,15 +329,15 @@ if run:
         energy_hist.append(e)
 
         fig = render_grid(grid)
-        grid_ph.pyplot(fig, use_container_width=True)
+        grid_ph.pyplot(fig, width="stretch")
         plt.close(fig)
 
         fig = render_sigil(grid)
-        sigil_ph.pyplot(fig, use_container_width=True)
+        sigil_ph.pyplot(fig, width="stretch")
         plt.close(fig)
 
         fig = render_energy(energy_hist)
-        energy_ph.pyplot(fig, use_container_width=True)
+        energy_ph.pyplot(fig, width="stretch")
         plt.close(fig)
 
         status_ph.markdown(
@@ -349,15 +349,15 @@ if run:
         energy_hist.append(e)
 
         fig = render_grid(grid)
-        grid_ph.pyplot(fig, use_container_width=True)
+        grid_ph.pyplot(fig, width="stretch")
         plt.close(fig)
 
         fig = render_sigil(grid)
-        sigil_ph.pyplot(fig, use_container_width=True)
+        sigil_ph.pyplot(fig, width="stretch")
         plt.close(fig)
 
         fig = render_energy(energy_hist)
-        energy_ph.pyplot(fig, use_container_width=True)
+        energy_ph.pyplot(fig, width="stretch")
         plt.close(fig)
 
         if mode == "Simulated Annealing":
