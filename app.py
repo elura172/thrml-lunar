@@ -18,8 +18,10 @@ Run:
   streamlit run app.py
 """
 
+import io
 import itertools
 import math
+import wave
 
 import matplotlib
 matplotlib.use("Agg")
@@ -401,6 +403,45 @@ def render_energy(history: list) -> plt.Figure:
     return fig
 
 
+# ── Audio ─────────────────────────────────────────────────────────────────────
+
+SAMPLERATE = 44100
+
+
+def grids_to_wav_bytes(
+    grid_history: list,
+    frame_duration: float = 0.2,
+) -> bytes:
+    """
+    Convert a list of grids to a WAV audio stream.
+    Each grid becomes one frame of 81 simultaneous sine waves (one per cell).
+    Values 1–81 → frequencies 110–880 Hz (3 octaves, exponential).
+    """
+    t = np.linspace(0, frame_duration, int(SAMPLERATE * frame_duration), endpoint=False)
+    # Fade in/out to avoid clicks between frames
+    fade = np.ones_like(t)
+    fade_len = int(SAMPLERATE * 0.015)
+    fade[:fade_len] = np.linspace(0, 1, fade_len)
+    fade[-fade_len:] = np.linspace(1, 0, fade_len)
+
+    frames = []
+    for grid in grid_history:
+        freqs = 110.0 * (2.0 ** ((grid.flatten() - 1) / 27.0))
+        frame = np.sum(np.sin(2 * np.pi * freqs[:, None] * t[None, :]), axis=0) * fade
+        peak = np.max(np.abs(frame))
+        frames.append((frame / peak * 0.7) if peak > 0 else frame)
+
+    signal = np.concatenate(frames)
+    s16 = (signal * 32767).clip(-32768, 32767).astype(np.int16)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(SAMPLERATE)
+        wf.writeframes(s16.tobytes())
+    return buf.getvalue()
+
+
 # ── Page layout ───────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Lunar Magic Square", page_icon="🌙", layout="wide")
@@ -493,6 +534,7 @@ status_ph  = st.empty()
 
 if run:
     energy_hist = []
+    grid_history = []   # for audio: sampled grid states across the run
     energy_field = active_field if (active_field is not None and field_weight > 0) else None
 
     if mode == "Simulated Annealing":
@@ -520,6 +562,8 @@ if run:
 
     for grid, e, best_e, step, accept, Tcur in gen:
         energy_hist.append(e)
+        if len(grid_history) < 120:   # cap at 120 frames (~24s of audio at 0.2s/frame)
+            grid_history.append(grid.copy())
 
         fig = render_grid(grid)
         grid_ph.pyplot(fig, width="stretch")
@@ -552,3 +596,21 @@ if run:
         f"<b style='color:#4ade80'>✓ Done — best energy: {min(energy_hist):.0f}</b>",
         unsafe_allow_html=True,
     )
+
+    if grid_history:
+        st.markdown("---")
+        st.markdown(
+            "**🎵 Listen to the annealing** "
+            "<small style='color:#6b7280'>— each grid snapshot becomes a chord of 81 sine waves "
+            "(values 1–81 → 110–880 Hz, three octaves)</small>",
+            unsafe_allow_html=True,
+        )
+        with st.spinner("Rendering audio…"):
+            wav_bytes = grids_to_wav_bytes(grid_history, frame_duration=0.2)
+        duration_s = len(grid_history) * 0.2
+        st.audio(wav_bytes, format="audio/wav")
+        st.caption(
+            f"{len(grid_history)} frames · {duration_s:.0f}s · "
+            f"early frames = chaos, late frames = harmony · "
+            f"tip: also try `python lunar_music.py --rows` for a melodic row scan"
+        )
