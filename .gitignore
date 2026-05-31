@@ -1,0 +1,9 @@
+runs/
+runs_*/
+*.zip
+__pycache__/
+*.py[cod]
+.DS_Store
+*.png
+*.csv
+*.json
